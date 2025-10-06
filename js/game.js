@@ -15,6 +15,10 @@
     invaderOscillationSpeed: 4, // Hz
     invaderSpeedIncreasePerRowCleared: 6,
     fireCooldownMs: 220,
+    rapidFireCooldownMs: 120,
+    powerupDropChance: 0.18,
+    powerupFallSpeed: 30,
+    powerupDurationSec: 6,
   };
 
   // Colors (pixel-art with UCP palette)
@@ -122,6 +126,14 @@
   const bullets = [];
   /** enemyBullets: {x,y,w,h} */
   const enemyBullets = [];
+  /** powerups: {x,y,w,h,type} type: 'rapid'|'shotgun'|'shield'|'speed' */
+  const powerups = [];
+
+  // Active timed effects
+  let rapidFireUntil = 0;
+  let shotgunUntil = 0;
+  let shieldUntil = 0; // visual cue for shield
+  let speedBoostUntil = 0;
 
   /** invaders: {x,y,w,h,alive} */
   let invaders = [];
@@ -138,6 +150,8 @@
     invaderDir = 1;
     invaderSpeed = CONFIG.invaderSpeed;
     waveStartTime = performance.now();
+    powerups.length = 0;
+    rapidFireUntil = shotgunUntil = shieldUntil = speedBoostUntil = 0;
 
     const startX = 16;
     const startY = 80; // much lower so they're much closer to player
@@ -182,8 +196,17 @@
   function fireBullet() {
     const now = performance.now();
     if (now < canFireAt) return;
-    canFireAt = now + CONFIG.fireCooldownMs;
-    bullets.push({ x: player.x + player.w / 2 - 1, y: player.y - 4, w: 2, h: 4 });
+    const cooldown = now < rapidFireUntil ? CONFIG.rapidFireCooldownMs : CONFIG.fireCooldownMs;
+    canFireAt = now + cooldown;
+
+    const cx = player.x + player.w / 2 - 1;
+    if (now < shotgunUntil) {
+      bullets.push({ x: cx - 4, y: player.y - 4, w: 2, h: 4 });
+      bullets.push({ x: cx, y: player.y - 4, w: 2, h: 4 });
+      bullets.push({ x: cx + 4, y: player.y - 4, w: 2, h: 4 });
+    } else {
+      bullets.push({ x: cx, y: player.y - 4, w: 2, h: 4 });
+    }
     playPlayerShoot(); // Very low volume sound
   }
 
@@ -196,8 +219,9 @@
 
     // player movement
     let dx = 0;
-    if (keys.has('left')) dx -= CONFIG.playerSpeed * dt;
-    if (keys.has('right')) dx += CONFIG.playerSpeed * dt;
+    const speed = (performance.now() < speedBoostUntil) ? CONFIG.playerSpeed * 1.6 : CONFIG.playerSpeed;
+    if (keys.has('left')) dx -= speed * dt;
+    if (keys.has('right')) dx += speed * dt;
     player.x = Math.max(4, Math.min(CONFIG.canvasWidth - player.w - 4, player.x + dx));
 
     if (keys.has('shoot')) fireBullet();
@@ -206,6 +230,13 @@
     for (let i = bullets.length - 1; i >= 0; i--) {
       bullets[i].y -= CONFIG.bulletSpeed * dt;
       if (bullets[i].y + bullets[i].h < 0) bullets.splice(i, 1);
+    }
+
+    // powerups falling
+    for (let i = powerups.length - 1; i >= 0; i--) {
+      const p = powerups[i];
+      p.y += CONFIG.powerupFallSpeed * dt;
+      if (p.y > CONFIG.canvasHeight) powerups.splice(i, 1);
     }
 
     // enemy bullets
@@ -262,6 +293,12 @@
           score += 10;
           updateScore();
           playEnemyKill(); // Kill sound
+          // chance to drop powerup
+          if (Math.random() < CONFIG.powerupDropChance) {
+            const types = ['rapid','shotgun','shield','speed'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            powerups.push({ x: inv.x + inv.w / 2 - 3, y: inv.y + inv.h, w: 6, h: 6, type });
+          }
           hit = true;
           break;
         }
@@ -273,20 +310,43 @@
     const playerRect = { x: player.x, y: player.y, w: player.w, h: player.h };
     for (let i = enemyBullets.length - 1; i >= 0; i--) {
       if (rectsOverlap(enemyBullets[i], playerRect)) {
+        if (performance.now() < shieldUntil) {
+          // consume shield
+          enemyBullets.splice(i, 1);
+          shieldUntil = 0;
+          playEnemyKill();
+          continue;
+        }
         isGameOver = true;
         break;
+      }
+    }
+
+    // collisions: player vs powerups
+    for (let i = powerups.length - 1; i >= 0; i--) {
+      if (rectsOverlap(powerups[i], playerRect)) {
+        applyPowerup(powerups[i].type);
+        powerups.splice(i, 1);
       }
     }
 
     // enemy shooting: occasionally fire from random bottom-most invader per column
     maybeEnemyFire(dt);
 
-    // check lose condition: invaders reach bottom
+    // check lose condition: invaders reach player
     for (const inv of invaders) {
       if (!inv.alive) continue;
       if (inv.y + inv.h >= player.y) {
-        isGameOver = true;
-        break;
+        if (performance.now() < shieldUntil) {
+          // consume shield and push invaders back
+          shieldUntil = 0;
+          for (const v of invaders) {
+            if (v.alive) { v.baseY -= CONFIG.invaderStepDown * 2; v.y = v.baseY; }
+          }
+        } else {
+          isGameOver = true;
+          break;
+        }
       }
     }
   }
@@ -319,6 +379,23 @@
     ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
   }
 
+  function drawRoundPowerup(x, y, w, h, color) {
+    const cx = Math.round(x + w/2);
+    const cy = Math.round(y + h/2);
+    const r = Math.round(w/2);
+    
+    // Glow effect
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Reset shadow
+    ctx.shadowBlur = 0;
+  }
+
   function drawPlayer() {
     // simple 16x8 pixel-art ship (blocky)
     const px = Math.round(player.x);
@@ -347,10 +424,22 @@
 
     // player
     drawPlayer();
+    // shield visual
+    if (performance.now() < shieldUntil) {
+      ctx.strokeStyle = COLORS.invader3;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(Math.round(player.x) - 2, Math.round(player.y) - 2, player.w + 4, player.h + 4);
+    }
 
     // bullets
     for (const b of bullets) drawPixelRect(b.x, b.y, b.w, b.h, COLORS.bullet);
     for (const eb of enemyBullets) drawPixelRect(eb.x, eb.y, eb.w, eb.h, COLORS.invader2);
+
+    // powerups
+    for (const p of powerups) {
+      const color = p.type === 'rapid' ? COLORS.invader2 : p.type === 'shotgun' ? COLORS.invader1 : p.type === 'shield' ? COLORS.invader3 : COLORS.bullet;
+      drawRoundPowerup(p.x, p.y, p.w, p.h, color);
+    }
 
     // invaders
     for (const inv of invaders) {
@@ -403,6 +492,15 @@
     const msg = 'GAME OVER - Press R to Restart';
     const textW = ctx.measureText(msg).width;
     ctx.fillText(msg, (CONFIG.canvasWidth - textW) / 2, CONFIG.canvasHeight / 2 - 6);
+  }
+
+  function applyPowerup(type) {
+    const now = performance.now();
+    const until = now + CONFIG.powerupDurationSec * 1000;
+    if (type === 'rapid') rapidFireUntil = until;
+    else if (type === 'shotgun') shotgunUntil = until;
+    else if (type === 'shield') shieldUntil = until;
+    else if (type === 'speed') speedBoostUntil = until;
   }
 
   function loop(ts) {
