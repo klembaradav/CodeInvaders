@@ -1,38 +1,41 @@
 # Code Invaders - Development Manual
 
 ## Game Overview
-**Code Invaders** is a retro-style space shooter game inspired by the classic Space Invaders, themed for the Update Conference Prague 2025. The game features neon aesthetics using the official UCP color palette and incorporates programming/coding elements as the core theme.
+**Code Invaders** is a retro-style space shooter game inspired by the classic Space Invaders, themed for the Update Conference Prague 2025. The game features pixel-art aesthetics using the official UCP color palette and incorporates programming/coding elements as the core theme.
 
 ## Color Palette (UCP Brand Colors)
 - **UCP Yellow**: `#FBB13C` - Primary accent color
 - **UCP Blue**: `#31B3F2` - Secondary accent color  
 - **UCP Pink**: `#F562A5` - Tertiary accent color
-- **Background**: Dark/black for neon contrast
+- **Background**: Dark/black for pixel-art contrast
 - **Text**: White/light colors for readability
+- **Pixel Art**: 8x8 or 16x16 pixel sprites
 
 ## Core Game Mechanics
 
 ### Player (Code Defender)
 - **Movement**: Left/Right arrow keys or A/D keys
 - **Shooting**: Spacebar or mouse click
-- **Appearance**: Retro spaceship with neon glow effect
+- **Appearance**: Pixel-art spaceship (16x16 sprite)
 - **Health**: 3 lives
-- **Weapon**: Laser beams (yellow/blue neon)
+- **Weapon**: Pixel laser beams (yellow/blue)
 
 ### Enemies (Code Invaders)
 - **Types**: 
-  - Basic bugs (pink neon)
-  - Syntax errors (yellow neon) 
-  - Logic errors (blue neon)
+  - Basic bugs (pink pixel sprites)
+  - Syntax errors (yellow pixel sprites) 
+  - Logic errors (blue pixel sprites)
 - **Movement**: Descending formation, side-to-side movement
 - **Shooting**: Occasional projectiles
 - **Points**: Different point values per enemy type
+- **Sprites**: 8x8 or 16x16 pixel art
 
 ### Power-ups
-- **Extra Life**: Pink heart with glow
-- **Rapid Fire**: Blue lightning bolt
-- **Shield**: Yellow protective barrier
+- **Extra Life**: Pink heart pixel sprite
+- **Rapid Fire**: Blue lightning bolt pixel sprite
+- **Shield**: Yellow protective barrier pixel sprite
 - **Multi-shot**: Triple laser spread
+- **Sprites**: 8x8 pixel art for all power-ups
 
 ## Technical Requirements
 
@@ -58,6 +61,11 @@ CodeInvadersEasy/
 │   └── utils.js
 ├── assets/
 │   ├── sounds/
+│   ├── sprites/
+│   │   ├── player.png
+│   │   ├── enemies/
+│   │   ├── powerups/
+│   │   └── effects/
 │   └── images/
 └── README.md
 ```
@@ -70,12 +78,14 @@ CodeInvadersEasy/
 - Focus on core gameplay mechanics first
 - Add polish and effects later
 
-### 2. Retro Neon Aesthetic
-- Dark background with bright neon colors
-- Glow effects using CSS box-shadow and text-shadow
-- Pixelated or blocky fonts
+### 2. Pixel-Art Aesthetic
+- Dark background with bright pixel colors
+- Pixel-perfect rendering with no anti-aliasing
+- Pixelated fonts (8-bit style)
 - Scanline effects for CRT monitor feel
-- Particle effects for explosions
+- Pixel-based particle effects for explosions
+- 8x8 or 16x16 pixel sprite dimensions
+- Limited color palette per sprite
 
 ### 3. Performance Considerations
 - Use requestAnimationFrame for smooth 60fps
@@ -136,10 +146,10 @@ CodeInvadersEasy/
 - [ ] Basic scoring
 
 ### Phase 2: Visual Polish
-- [ ] Neon styling and effects
-- [ ] Particle systems
-- [ ] Background animations
-- [ ] UI/UX improvements
+- [ ] Pixel-art styling and effects
+- [ ] Pixel-based particle systems
+- [ ] Background pixel animations
+- [ ] UI/UX improvements with pixel fonts
 
 ### Phase 3: Audio & Polish
 - [ ] Sound effects implementation
