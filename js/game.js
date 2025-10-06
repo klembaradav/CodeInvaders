@@ -1,15 +1,15 @@
 (() => {
   // Config
   const CONFIG = {
-    canvasWidth: 240,   // internal pixel resolution (scaled up by CSS)
+    canvasWidth: 360,   // internal pixel resolution (scaled up by CSS) - wider canvas
     canvasHeight: 320,
     playerSpeed: 80,    // px per second
     bulletSpeed: 180,
-    invaderCols: 8,
-    invaderRows: 4,
-    invaderHSpacing: 20,
-    invaderVSpacing: 16,
-    invaderStepDown: 8,
+    invaderCols: 12, // more invaders to fill wider canvas
+    invaderRows: 5,
+    invaderHSpacing: 18,
+    invaderVSpacing: 14,
+    invaderStepDown: 10,
     invaderSpeed: 20,   // horizontal speed (px/s) base
     invaderOscillationPx: 3, // small vertical wiggle
     invaderOscillationSpeed: 4, // Hz
@@ -24,6 +24,7 @@
     bullet: '#FBB13C',
     invader1: '#F562A5',
     invader2: '#31B3F2',
+    invader3: '#FBB13C', // yellow invaders
     text: '#f2f2f2',
   };
 
@@ -65,7 +66,7 @@
     w: 12,
     h: 8,
     x: (CONFIG.canvasWidth - 12) / 2,
-    y: CONFIG.canvasHeight - 24,
+    y: CONFIG.canvasHeight - 50, // much higher to be closer to enemies
   };
 
   /** bullets: {x,y,w,h} */
@@ -89,8 +90,8 @@
     invaderSpeed = CONFIG.invaderSpeed;
     waveStartTime = performance.now();
 
-    const startX = 20;
-    const startY = 40;
+    const startX = 16;
+    const startY = 80; // much lower so they're much closer to player
     for (let row = 0; row < CONFIG.invaderRows; row++) {
       for (let col = 0; col < CONFIG.invaderCols; col++) {
         invaders.push({
@@ -183,8 +184,13 @@
         if (!inv.alive) continue;
         inv.baseY += CONFIG.invaderStepDown;
         inv.y = inv.baseY;
-        if (inv.y + inv.h >= player.y) {
-          isGameOver = true;
+        // Check if invaders get too close to player (within 20px)
+        if (inv.y + inv.h >= player.y - 20) {
+          // Bounce back up instead of game over
+          inv.baseY -= CONFIG.invaderStepDown * 2;
+          inv.y = inv.baseY;
+          // Increase speed when they get close
+          invaderSpeed += 5;
         }
       }
     }
@@ -236,8 +242,8 @@
     invaderSpeed = nextSpeed ?? CONFIG.invaderSpeed;
     waveStartTime = performance.now();
 
-    const startX = 20;
-    const startY = 40;
+    const startX = 16;
+    const startY = 80; // much lower so they're much closer to player
     for (let row = 0; row < CONFIG.invaderRows; row++) {
       for (let col = 0; col < CONFIG.invaderCols; col++) {
         invaders.push({
@@ -293,7 +299,11 @@
     // invaders
     for (const inv of invaders) {
       if (!inv.alive) continue;
-      const color = ((Math.floor(inv.y / CONFIG.invaderVSpacing)) % 2 === 0) ? COLORS.invader1 : COLORS.invader2;
+      const rowIndex = Math.floor((inv.y - 80) / CONFIG.invaderVSpacing);
+      let color;
+      if (rowIndex % 3 === 0) color = COLORS.invader1; // pink
+      else if (rowIndex % 3 === 1) color = COLORS.invader2; // blue
+      else color = COLORS.invader3; // yellow
       drawInvader(inv, color);
     }
 
