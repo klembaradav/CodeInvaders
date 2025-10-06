@@ -62,6 +62,55 @@
   const keys = new Set();
   let canFireAt = 0;
 
+  // Audio context for sound effects
+  let audioContext = null;
+  let soundsEnabled = true;
+
+  // Initialize audio context on first user interaction
+  function initAudio() {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  // Simple 8-bit style sound generator
+  function playSound(frequency, duration, type = 'square') {
+    if (!audioContext || !soundsEnabled) return;
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+    oscillator.type = type;
+    
+    // Envelope for 8-bit sound
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + duration);
+  }
+
+  // Sound effects
+  function playPlayerShoot() {
+    playSound(800, 0.1, 'square'); // High pitch, short
+  }
+
+  function playEnemyShoot() {
+    playSound(200, 0.15, 'sawtooth'); // Low pitch, slightly longer
+  }
+
+  function playEnemyKill() {
+    // Descending tone for kill
+    playSound(400, 0.2, 'square');
+    setTimeout(() => playSound(300, 0.15, 'square'), 50);
+    setTimeout(() => playSound(200, 0.1, 'square'), 100);
+  }
+
   const player = {
     w: 12,
     h: 8,
@@ -118,6 +167,11 @@
     if (e.code === 'KeyR') {
       resetGame();
     }
+    if (e.code === 'KeyM') {
+      soundsEnabled = !soundsEnabled;
+    }
+    // Initialize audio on first key press
+    initAudio();
   });
   window.addEventListener('keyup', (e) => {
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.delete('left');
@@ -130,6 +184,7 @@
     if (now < canFireAt) return;
     canFireAt = now + CONFIG.fireCooldownMs;
     bullets.push({ x: player.x + player.w / 2 - 1, y: player.y - 4, w: 2, h: 4 });
+    playPlayerShoot(); // Very low volume sound
   }
 
   function rectsOverlap(a, b) {
@@ -206,6 +261,7 @@
           bullets.splice(b, 1);
           score += 10;
           updateScore();
+          playEnemyKill(); // Kill sound
           hit = true;
           break;
         }
@@ -337,6 +393,7 @@
     colInvs.sort((a, b) => b.y - a.y);
     const shooter = colInvs[0];
     enemyBullets.push({ x: shooter.x + shooter.w / 2 - 1, y: shooter.y + shooter.h, w: 2, h: 4 });
+    playEnemyShoot(); // Enemy shooting sound
   }
 
   function drawGameOver() {
