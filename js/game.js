@@ -16,9 +16,15 @@
     invaderSpeedIncreasePerRowCleared: 6,
     fireCooldownMs: 220,
     rapidFireCooldownMs: 120,
-    powerupDropChance: 0.5,
+    powerupDropChance: 0.25,
     powerupFallSpeed: 50,
     powerupDurationSec: 6,
+    powerupNames: {
+      rapid: 'Machinegun',
+      shotgun: 'Shotgun', 
+      shield: 'Shield',
+      speed: 'Speed'
+    },
   };
 
   // Colors (pixel-art with UCP palette)
@@ -177,10 +183,10 @@
   function updatePowerupsUI() {
     const now = performance.now();
     const items = [];
-    if (now < rapidFireUntil) items.push({ key: 'Rapid', color: COLORS.invader2, remaining: (rapidFireUntil - now) / 1000 });
-    if (now < shotgunUntil) items.push({ key: 'Shotgun', color: COLORS.invader1, remaining: (shotgunUntil - now) / 1000 });
-    if (now < shieldUntil) items.push({ key: 'Shield', color: COLORS.invader3, remaining: (shieldUntil - now) / 1000 });
-    if (now < speedBoostUntil) items.push({ key: 'Speed', color: COLORS.bullet, remaining: (speedBoostUntil - now) / 1000 });
+    if (now < rapidFireUntil) items.push({ key: CONFIG.powerupNames.rapid, color: COLORS.invader2, remaining: (rapidFireUntil - now) / 1000 });
+    if (now < shotgunUntil) items.push({ key: CONFIG.powerupNames.shotgun, color: COLORS.invader1, remaining: (shotgunUntil - now) / 1000 });
+    if (now < shieldUntil) items.push({ key: CONFIG.powerupNames.shield, color: COLORS.invader3, remaining: (shieldUntil - now) / 1000 });
+    if (now < speedBoostUntil) items.push({ key: CONFIG.powerupNames.speed, color: COLORS.bullet, remaining: (speedBoostUntil - now) / 1000 });
 
     powerupsUi.innerHTML = items.map(i => {
       const secs = Math.max(0, Math.ceil(i.remaining));
