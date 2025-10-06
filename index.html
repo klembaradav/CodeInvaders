@@ -10,15 +10,43 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <div id="game-root">
+    <!-- Start Screen -->
+    <div id="start-screen">
+      <div class="start-content">
+        <h1 class="game-title">Code Invaders</h1>
+        <div class="start-form">
+          <input type="text" id="nickname-input" placeholder="Enter your nickname" maxlength="20">
+          <button id="start-game-btn">Start Game</button>
+        </div>
+        <div class="scoreboard">
+          <h3>High Scores</h3>
+          <div id="scoreboard-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-root" class="hidden">
       <canvas id="game"></canvas>
       <div id="ui">
         <div class="title">Code Invaders</div>
         <div class="score">Score: <span id="score">0</span></div>
-        <div class="controls">←/→ or A/D to move • Space to shoot • R to restart • M to toggle sound</div>
+        <div class="timer">Time: <span id="timer">10</span>s</div>
+        <div class="controls">←/→ or A/D to move • Space to shoot • M to toggle sound</div>
       </div>
       <div id="powerups-ui"></div>
     </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="hidden">
+      <div class="game-over-content">
+        <h2>Game Over!</h2>
+        <div class="final-score">Final Score: <span id="final-score">0</span></div>
+        <div class="player-name">Player: <span id="final-player">Anonymous</span></div>
+        <button id="play-again-btn">Play Again</button>
+      </div>
+    </div>
+
     <script src="js/game.js"></script>
   </body>
   </html>

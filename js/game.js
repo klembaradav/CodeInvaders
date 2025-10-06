@@ -67,7 +67,10 @@
   let lastTime = 0;
   let isGameOver = false;
   let score = 0;
+  let playerName = '';
+  let gameTimeLeft = 10; // 10 seconds
   const scoreEl = document.getElementById('score');
+  const timerEl = document.getElementById('timer');
   const powerupsUi = document.getElementById('powerups-ui');
 
   const keys = new Set();
@@ -122,6 +125,29 @@
     setTimeout(() => playSound(200, 0.1, 'square'), 100);
   }
 
+  function playGameOver() {
+    // Dramatic descending sequence for game over
+    playSound(600, 0.3, 'square');
+    setTimeout(() => playSound(400, 0.3, 'square'), 100);
+    setTimeout(() => playSound(200, 0.4, 'square'), 200);
+    setTimeout(() => playSound(100, 0.5, 'square'), 300);
+  }
+
+  function playTimeUp() {
+    // Victory-like ascending sequence for time up
+    playSound(200, 0.2, 'square');
+    setTimeout(() => playSound(300, 0.2, 'square'), 100);
+    setTimeout(() => playSound(400, 0.2, 'square'), 200);
+    setTimeout(() => playSound(500, 0.3, 'square'), 300);
+  }
+
+  function playMenuAmbient() {
+    // Subtle ambient sound for main menu
+    playSound(150, 0.1, 'sine');
+    setTimeout(() => playSound(200, 0.1, 'sine'), 2000);
+    setTimeout(() => playSound(180, 0.1, 'sine'), 4000);
+  }
+
   const player = {
     w: 12,
     h: 8,
@@ -151,7 +177,9 @@
   function resetGame() {
     isGameOver = false;
     score = 0;
+    gameTimeLeft = 10;
     updateScore();
+    updateTimer();
     bullets.length = 0;
     invaders = [];
     invaderDir = 1;
@@ -178,6 +206,10 @@
 
   function updateScore() {
     scoreEl.textContent = String(score);
+  }
+
+  function updateTimer() {
+    timerEl.textContent = String(Math.ceil(gameTimeLeft));
   }
 
   function updatePowerupsUI() {
@@ -237,6 +269,18 @@
 
   function update(dt) {
     if (isGameOver) return;
+
+    // Update game timer
+    gameTimeLeft -= dt;
+    updateTimer();
+    
+    // Check if time is up
+    if (gameTimeLeft <= 0) {
+      isGameOver = true;
+      playTimeUp(); // Victory sound for completing the time
+      showGameOver();
+      return;
+    }
 
     // player movement
     let dx = 0;
@@ -330,17 +374,19 @@
     // collisions: enemy bullets vs player
     const playerRect = { x: player.x, y: player.y, w: player.w, h: player.h };
     for (let i = enemyBullets.length - 1; i >= 0; i--) {
-      if (rectsOverlap(enemyBullets[i], playerRect)) {
-        if (performance.now() < shieldUntil) {
-          // consume shield
-          enemyBullets.splice(i, 1);
-          shieldUntil = 0;
-          playEnemyKill();
-          continue;
+        if (rectsOverlap(enemyBullets[i], playerRect)) {
+          if (performance.now() < shieldUntil) {
+            // consume shield
+            enemyBullets.splice(i, 1);
+            shieldUntil = 0;
+            playEnemyKill();
+            continue;
+          }
+          isGameOver = true;
+          playGameOver(); // Dramatic game over sound
+          showGameOver();
+          break;
         }
-        isGameOver = true;
-        break;
-      }
     }
 
     // collisions: player vs powerups
@@ -367,6 +413,8 @@
           }
         } else {
           isGameOver = true;
+          playGameOver(); // Dramatic game over sound
+          showGameOver();
           break;
         }
       }
@@ -518,9 +566,73 @@
     ctx.fillStyle = COLORS.text;
     ctx.font = '8px "Press Start 2P", monospace';
     ctx.textBaseline = 'top';
-    const msg = 'GAME OVER - Press R to Restart';
+    const msg = 'GAME OVER';
     const textW = ctx.measureText(msg).width;
     ctx.fillText(msg, (CONFIG.canvasWidth - textW) / 2, CONFIG.canvasHeight / 2 - 6);
+  }
+
+  // Screen management functions
+  function showStartScreen() {
+    document.getElementById('start-screen').classList.remove('hidden');
+    document.getElementById('game-root').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    loadScoreboard();
+    // Play subtle ambient sound for main menu
+    if (soundsEnabled) {
+      playMenuAmbient();
+    }
+  }
+
+  function showGameScreen() {
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('game-root').classList.remove('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+  }
+
+  function showGameOver() {
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('game-root').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    
+    // Update final score display
+    document.getElementById('final-score').textContent = String(score);
+    document.getElementById('final-player').textContent = playerName;
+    
+    // Add to scoreboard
+    addToScoreboard();
+  }
+
+  // Scoreboard functions
+  function getScoreboard() {
+    return JSON.parse(localStorage.getItem('codeInvadersScoreboard') || '[]');
+  }
+
+  function addToScoreboard() {
+    const scoreboard = getScoreboard();
+    scoreboard.push({
+      name: playerName,
+      score: score,
+      date: new Date().toLocaleDateString()
+    });
+    
+    // Sort by score (highest first) and keep top 10
+    scoreboard.sort((a, b) => b.score - a.score);
+    scoreboard.splice(10);
+    
+    localStorage.setItem('codeInvadersScoreboard', JSON.stringify(scoreboard));
+    loadScoreboard();
+  }
+
+  function loadScoreboard() {
+    const scoreboard = getScoreboard();
+    const scoreboardList = document.getElementById('scoreboard-list');
+    
+    scoreboardList.innerHTML = scoreboard.map((entry, index) => 
+      `<div class="scoreboard-entry">
+        <span>${index + 1}. ${entry.name}</span>
+        <span>${entry.score}</span>
+      </div>`
+    ).join('');
   }
 
   function applyPowerup(type) {
@@ -541,8 +653,34 @@
     requestAnimationFrame(loop);
   }
 
+  // Event listeners
+  document.getElementById('start-game-btn').addEventListener('click', () => {
+    playerName = document.getElementById('nickname-input').value.trim() || 'Anonymous';
+    showGameScreen();
+    resetGame();
+  });
+
+  document.getElementById('play-again-btn').addEventListener('click', () => {
+    showStartScreen();
+    document.getElementById('nickname-input').value = playerName;
+  });
+
+  // Enter key support for nickname input
+  document.getElementById('nickname-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('start-game-btn').click();
+    }
+  });
+
+  // Enter key support for play again button
+  document.getElementById('play-again-btn').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('play-again-btn').click();
+    }
+  });
+
   // init
-  resetGame();
+  showStartScreen();
   requestAnimationFrame((t) => {
     lastTime = t;
     loop(t);
