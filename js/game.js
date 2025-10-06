@@ -16,8 +16,8 @@
     invaderSpeedIncreasePerRowCleared: 6,
     fireCooldownMs: 220,
     rapidFireCooldownMs: 120,
-    powerupDropChance: 0.18,
-    powerupFallSpeed: 30,
+    powerupDropChance: 0.5,
+    powerupFallSpeed: 50,
     powerupDurationSec: 6,
   };
 
@@ -62,6 +62,7 @@
   let isGameOver = false;
   let score = 0;
   const scoreEl = document.getElementById('score');
+  const powerupsUi = document.getElementById('powerups-ui');
 
   const keys = new Set();
   let canFireAt = 0;
@@ -171,6 +172,20 @@
 
   function updateScore() {
     scoreEl.textContent = String(score);
+  }
+
+  function updatePowerupsUI() {
+    const now = performance.now();
+    const items = [];
+    if (now < rapidFireUntil) items.push({ key: 'Rapid', color: COLORS.invader2, remaining: (rapidFireUntil - now) / 1000 });
+    if (now < shotgunUntil) items.push({ key: 'Shotgun', color: COLORS.invader1, remaining: (shotgunUntil - now) / 1000 });
+    if (now < shieldUntil) items.push({ key: 'Shield', color: COLORS.invader3, remaining: (shieldUntil - now) / 1000 });
+    if (now < speedBoostUntil) items.push({ key: 'Speed', color: COLORS.bullet, remaining: (speedBoostUntil - now) / 1000 });
+
+    powerupsUi.innerHTML = items.map(i => {
+      const secs = Math.max(0, Math.ceil(i.remaining));
+      return `<span class="pui-item">${i.key} ${secs}s</span>`;
+    }).join('');
   }
 
   // Input
@@ -327,6 +342,7 @@
       if (rectsOverlap(powerups[i], playerRect)) {
         applyPowerup(powerups[i].type);
         powerups.splice(i, 1);
+        updatePowerupsUI();
       }
     }
 
@@ -394,6 +410,13 @@
     
     // Reset shadow
     ctx.shadowBlur = 0;
+
+    // Plus sign to indicate power-up
+    ctx.fillStyle = COLORS.text;
+    // vertical line
+    ctx.fillRect(cx - 1, cy - (r - 1), 2, (r - 1) * 2);
+    // horizontal line
+    ctx.fillRect(cx - (r - 1), cy - 1, (r - 1) * 2, 2);
   }
 
   function drawPlayer() {
@@ -508,6 +531,7 @@
     lastTime = ts;
     update(dt);
     render();
+    updatePowerupsUI();
     requestAnimationFrame(loop);
   }
 
