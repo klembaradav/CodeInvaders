@@ -181,12 +181,17 @@
     updateScore();
     updateTimer();
     bullets.length = 0;
+    enemyBullets.length = 0; // Clear enemy bullets too
     invaders = [];
     invaderDir = 1;
     invaderSpeed = CONFIG.invaderSpeed;
     waveStartTime = performance.now();
     powerups.length = 0;
     rapidFireUntil = shotgunUntil = shieldUntil = speedBoostUntil = 0;
+    
+    // Reset player position
+    player.x = (CONFIG.canvasWidth - 12) / 2;
+    player.y = CONFIG.canvasHeight - 50;
 
     const startX = 16;
     const startY = 80; // much lower so they're much closer to player
@@ -587,6 +592,10 @@
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('game-root').classList.remove('hidden');
     document.getElementById('game-over-screen').classList.add('hidden');
+    // Reset game state when showing game screen
+    resetGame();
+    // Force update the powerups UI after reset
+    updatePowerupsUI();
   }
 
   function showGameOver() {
@@ -657,7 +666,7 @@
   document.getElementById('start-game-btn').addEventListener('click', () => {
     playerName = document.getElementById('nickname-input').value.trim() || 'Anonymous';
     showGameScreen();
-    resetGame();
+    // resetGame() is now called inside showGameScreen()
   });
 
   document.getElementById('play-again-btn').addEventListener('click', () => {
