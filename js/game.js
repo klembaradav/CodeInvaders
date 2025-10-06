@@ -68,7 +68,7 @@
   let isGameOver = false;
   let score = 0;
   let playerName = '';
-  let gameTimeLeft = 10; // 10 seconds
+  let gameTimeLeft = 30; // 30 seconds
   const scoreEl = document.getElementById('score');
   const timerEl = document.getElementById('timer');
   const powerupsUi = document.getElementById('powerups-ui');
@@ -177,7 +177,7 @@
   function resetGame() {
     isGameOver = false;
     score = 0;
-    gameTimeLeft = 10;
+    gameTimeLeft = 30;
     updateScore();
     updateTimer();
     bullets.length = 0;

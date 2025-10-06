@@ -230,7 +230,7 @@ html, body {
 
 /* Timer styling */
 .timer {
-  font-size: 16px;
+  font-size: 24px;
   color: var(--ucp-pink);
   text-shadow: 0 0 6px rgba(245, 98, 165, 0.9);
   margin-bottom: 8px;
