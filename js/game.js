@@ -11,6 +11,8 @@
     invaderVSpacing: 16,
     invaderStepDown: 8,
     invaderSpeed: 20,   // horizontal speed (px/s) base
+    invaderOscillationPx: 3, // small vertical wiggle
+    invaderOscillationSpeed: 4, // Hz
     invaderSpeedIncreasePerRowCleared: 6,
     fireCooldownMs: 220,
   };
@@ -68,11 +70,14 @@
 
   /** bullets: {x,y,w,h} */
   const bullets = [];
+  /** enemyBullets: {x,y,w,h} */
+  const enemyBullets = [];
 
   /** invaders: {x,y,w,h,alive} */
   let invaders = [];
   let invaderDir = 1; // 1 right, -1 left
   let invaderSpeed = CONFIG.invaderSpeed;
+  let waveStartTime = 0; // for oscillation phase
 
   function resetGame() {
     isGameOver = false;
@@ -82,6 +87,7 @@
     invaders = [];
     invaderDir = 1;
     invaderSpeed = CONFIG.invaderSpeed;
+    waveStartTime = performance.now();
 
     const startX = 20;
     const startY = 40;
@@ -93,6 +99,7 @@
           w: 10,
           h: 8,
           alive: true,
+          baseY: startY + row * CONFIG.invaderVSpacing,
         });
       }
     }
@@ -145,12 +152,21 @@
       if (bullets[i].y + bullets[i].h < 0) bullets.splice(i, 1);
     }
 
+    // enemy bullets
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
+      enemyBullets[i].y += (CONFIG.bulletSpeed * 0.7) * dt;
+      if (enemyBullets[i].y > CONFIG.canvasHeight) enemyBullets.splice(i, 1);
+    }
+
     // invaders horizontal move
     let minX = Infinity;
     let maxX = -Infinity;
     for (const inv of invaders) {
       if (!inv.alive) continue;
       inv.x += invaderDir * invaderSpeed * dt;
+      // subtle vertical oscillation
+      const t = (performance.now() - waveStartTime) / 1000;
+      inv.y = inv.baseY + Math.round(Math.sin(t * CONFIG.invaderOscillationSpeed + inv.x * 0.05) * CONFIG.invaderOscillationPx);
       if (inv.x < minX) minX = inv.x;
       if (inv.x + inv.w > maxX) maxX = inv.x + inv.w;
     }
@@ -165,7 +181,8 @@
       invaderDir *= -1;
       for (const inv of invaders) {
         if (!inv.alive) continue;
-        inv.y += CONFIG.invaderStepDown;
+        inv.baseY += CONFIG.invaderStepDown;
+        inv.y = inv.baseY;
         if (inv.y + inv.h >= player.y) {
           isGameOver = true;
         }
@@ -190,6 +207,18 @@
       if (hit) continue;
     }
 
+    // collisions: enemy bullets vs player
+    const playerRect = { x: player.x, y: player.y, w: player.w, h: player.h };
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
+      if (rectsOverlap(enemyBullets[i], playerRect)) {
+        isGameOver = true;
+        break;
+      }
+    }
+
+    // enemy shooting: occasionally fire from random bottom-most invader per column
+    maybeEnemyFire(dt);
+
     // check lose condition: invaders reach bottom
     for (const inv of invaders) {
       if (!inv.alive) continue;
@@ -205,6 +234,7 @@
     invaders = [];
     invaderDir = 1;
     invaderSpeed = nextSpeed ?? CONFIG.invaderSpeed;
+    waveStartTime = performance.now();
 
     const startX = 20;
     const startY = 40;
@@ -216,6 +246,7 @@
           w: 10,
           h: 8,
           alive: true,
+          baseY: startY + row * CONFIG.invaderVSpacing,
         });
       }
     }
@@ -257,6 +288,7 @@
 
     // bullets
     for (const b of bullets) drawPixelRect(b.x, b.y, b.w, b.h, COLORS.bullet);
+    for (const eb of enemyBullets) drawPixelRect(eb.x, eb.y, eb.w, eb.h, COLORS.invader2);
 
     // invaders
     for (const inv of invaders) {
@@ -270,9 +302,36 @@
     }
   }
 
+  let enemyFireTimer = 0;
+  function maybeEnemyFire(dt) {
+    enemyFireTimer -= dt;
+    if (enemyFireTimer > 0) return;
+    // attempt fire every ~0.8-1.4s
+    enemyFireTimer = 0.8 + Math.random() * 0.6;
+
+    // group invaders by approximate column based on x
+    const alive = invaders.filter(v => v.alive);
+    if (alive.length === 0) return;
+    const columns = new Map();
+    for (const inv of alive) {
+      const key = Math.round(inv.x / CONFIG.invaderHSpacing);
+      const list = columns.get(key) || [];
+      list.push(inv);
+      columns.set(key, list);
+    }
+    // pick a random column, then bottom-most in that column
+    const keys = Array.from(columns.keys());
+    const pickKey = keys[Math.floor(Math.random() * keys.length)];
+    const colInvs = columns.get(pickKey) || [];
+    if (colInvs.length === 0) return;
+    colInvs.sort((a, b) => b.y - a.y);
+    const shooter = colInvs[0];
+    enemyBullets.push({ x: shooter.x + shooter.w / 2 - 1, y: shooter.y + shooter.h, w: 2, h: 4 });
+  }
+
   function drawGameOver() {
     ctx.fillStyle = COLORS.text;
-    ctx.font = '10px monospace';
+    ctx.font = '8px "Press Start 2P", monospace';
     ctx.textBaseline = 'top';
     const msg = 'GAME OVER - Press R to Restart';
     const textW = ctx.measureText(msg).width;
