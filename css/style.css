@@ -22,10 +22,12 @@ html, body {
 }
 
 #game {
-  /* Designed internal resolution is small; scaled up via CSS */
+  /* Designed internal resolution is small; scaled via JS to fully fit viewport */
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   box-shadow: 0 0 0 2px #101010, 0 0 24px rgba(49, 179, 242, 0.3);
+  max-width: 100vw;
+  max-height: 100vh;
 }
 
 #ui {
@@ -57,19 +59,6 @@ html, body {
   margin-top: 6px;
 }
 
-/* Responsive scale: keep aspect ratio; scale canvas up to fit */
-@media (min-aspect-ratio: 4/3) {
-  #game {
-    width: min(90vmin, 960px);
-    height: auto;
-  }
-}
-
-@media (max-aspect-ratio: 4/3) {
-  #game {
-    height: min(90vmin, 720px);
-    width: auto;
-  }
-}
+/* Sizing handled in JS to guarantee full visibility (100%) */
 
 

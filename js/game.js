@@ -34,6 +34,23 @@
   // prevent blurring
   ctx.imageSmoothingEnabled = false;
 
+  // Fit canvas to viewport at 100% while preserving aspect ratio
+  function fitCanvasToViewport() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const aspect = CONFIG.canvasWidth / CONFIG.canvasHeight;
+    let cssW = vw;
+    let cssH = Math.round(cssW / aspect);
+    if (cssH > vh) {
+      cssH = vh;
+      cssW = Math.round(cssH * aspect);
+    }
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+  }
+  window.addEventListener('resize', fitCanvasToViewport);
+  fitCanvasToViewport();
+
   let lastTime = 0;
   let isGameOver = false;
   let score = 0;
